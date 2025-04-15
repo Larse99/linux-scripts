@@ -35,7 +35,7 @@ echo "$yaml_content" | sudo tee "$config_file" > /dev/null
 chmod 0600 $config_file
 
 # Apply the new configuration
-sudo netplan apply
+netplan apply
 
 echo "Network configuration has been updated and applied."
 
