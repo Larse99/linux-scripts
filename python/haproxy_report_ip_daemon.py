@@ -1,5 +1,5 @@
 # Author: Lars Eissink
-$ github.com/larse99
+# github.com/larse99
 # https://larrs.nl
 # Automatically reports malicious IPs within the HAProxy log file. Based on rules, abuseIPDB scores and more.
 # This script makes use of a whitelist, so it never bans 'wrong' IPs or ranged.
