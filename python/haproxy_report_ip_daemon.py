@@ -1,13 +1,35 @@
-# Author: Lars Eissink
-# github.com/larse99
-# https://larrs.nl
-# Automatically reports malicious IPs within the HAProxy log file. Based on rules, abuseIPDB scores and more.
-# This script makes use of a whitelist, so it never bans 'wrong' IPs or ranged.
-# It also uses a cache file, to make sure to not report the same IP within 24 hours.
-# Also includes a manual mode to check for malicious activity.
-# This utility uses 'ipcheck'. Make sure this is installed first. Link will be added later..
-
 #!/usr/bin/env python3
+# Author  : Lars Eissink
+# GitHub  : github.com/larse99
+# Website : https://larrs.nl
+#
+# Automatically reports malicious IPs to AbuseIPDB based on HAProxy log
+# activity, configurable rules, and AbuseIPDB threat scores.
+#
+# Key features:
+#   - Whitelist: ensures trusted and private IP ranges are never reported.
+#   - Cache: prevents the same IP from being reported more than once per day.
+#   - Scan mode (--scan): processes the full log file retroactively instead
+#     of tailing it in real time.
+#   - Requires 'ipcheck' to be installed.
+#
+# Systemd unit file - for live tailing and reporting malicious IPs
+#
+# [Unit]
+# Description=IP Reporter Daemon
+# After=network.target
+#
+# [Service]
+# ExecStart=/usr/bin/python3 /path/to/script_directory/haproxy_report_ip_daemon.py
+# Restart=on-failure
+# RestartSec=5
+# User=root
+# StandardOutput=journal
+# StandardError=journal
+#
+# [Install]
+# WantedBy=multi-user.target
+
 import argparse
 import ipaddress
 import subprocess
@@ -18,6 +40,7 @@ from datetime import datetime
 from threading import Thread
 from queue import Queue
 
+# --- CLASSES ---
 # Cache (persistent, TTL)
 class IPCache:
     def __init__(self, file="/var/lib/ipreporter_cache.json", ttl=86400):
@@ -192,7 +215,7 @@ class HAProxyLogParser:
 
         try:
             addr = ipaddress.ip_address(ip)
-            # Unwrap IPv4-mapped IPv6 (::ffff:1.2.3.4 → 1.2.3.4)
+            # Unwrap IPv4-mapped IPv6 (::ffff:1.2.3.4 -> 1.2.3.4)
             if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
                 return str(addr.ipv4_mapped)
             return str(addr)
@@ -200,6 +223,7 @@ class HAProxyLogParser:
             return None
 
 
+# --- MAIN ---
 # Config
 LOGFILE = "/var/log/ipcheck_report.log"
 REASON = "Detected Scanning / Hacking activity"
@@ -218,7 +242,6 @@ CACHE_FILE = "/var/lib/ipreporter_cache.json"
 CACHE_TTL = 86400  # 1 day
 
 ABUSE_SCORE_THRESHOLD = 50
-
 
 def process_lines(lines, parser, reporter, cache):
     for line in lines:
